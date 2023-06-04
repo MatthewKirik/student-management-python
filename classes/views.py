@@ -1,26 +1,54 @@
-from django.shortcuts import render
-from django.views.generic import DetailView, CreateView
+from pyclbr import Class
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
 
-from django.urls import reverse_lazy
-from .models import Class
-from .services import get_class, create_class
+from StudentManagementAPI.permissions import IsHead, IsTeacher
+from .services import create_class, assign_students_to_class, get_teacher_course_classes, get_class
+from django.http import Http404
+import json
 
-class ClassDetailView(DetailView):
-    model = Class
-    template_name = 'classes/class_detail.html'
+class ClassCreate(APIView):
+    permission_classes = [IsHead]
 
-    def get_object(self):
-        class_id = self.kwargs.get("pk")
-        return get_class(class_id)
+    def post(self, request, format=None):
+        name = request.data.get('name')
+        try:
+            class_ = create_class(name)
+            return Response(json.dumps({"id": class_.id, "name": class_.name}), status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ClassCreateView(CreateView):
-    model = Class
-    fields = ['course', 'teacher']
-    success_url = reverse_lazy('classes:class_detail')
+class StudentsToClassAssignment(APIView):
+    permission_classes = [IsHead]
 
-    def form_valid(self, form):
-        course = form.cleaned_data.get('course')
-        teacher = form.cleaned_data.get('teacher')
-        create_class(course, teacher)
-        return super().form_valid(form)
+    def post(self, request, class_id, format=None):
+        student_ids = request.data.get('student_ids')
+        try:
+            class_ = assign_students_to_class(class_id, student_ids)
+            students = [{"id": student.id, "name": student.name} for student in class_.students.all()]
+            return Response(json.dumps({"id": class_.id, "name": class_.name, "students": students}), status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TeacherCourseClassesList(APIView):
+    permission_classes = [IsTeacher]
+
+    def get(self, request, teacher_id, course_id, format=None):
+        classes = get_teacher_course_classes(teacher_id, course_id)
+        classes_data = [{"id": class_.id, "name": class_.name} for class_ in classes]
+        return Response(json.dumps(classes_data), status=status.HTTP_200_OK)
+
+
+class ClassDetail(APIView):
+    permission_classes = [IsHead]
+
+    def get(self, request, class_id, format=None):
+        try:
+            class_ = get_class(class_id)
+            students = [{"id": student.id, "name": student.name} for student in class_.students.all()]
+            return Response(json.dumps({"id": class_.id, "name": class_.name, "students": students}), status=status.HTTP_200_OK)
+        except Class.DoesNotExist:
+            raise Http404
