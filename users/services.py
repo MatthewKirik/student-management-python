@@ -1,15 +1,28 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
+from .models import User
 
-def create_user(username, password, role):
-    User = get_user_model()
-    user = User.objects.create_user(username=username, password=password, role=role)
-    return user
 
-def get_user(user_id):
-    User = get_user_model()
-    return User.objects.get(id=user_id)
+def create_student(name, email, password):
+    student = User.objects.create(
+        name=name, email=email, password=password, role='student')
+    return student
+
+
+def create_teacher(name, email, password):
+    teacher = User.objects.create(
+        name=name, email=email, password=password, role='teacher')
+    return teacher
+
+
+def get_student(student_id):
+    return User.objects.get(id=student_id, role='student')
+
+
+def get_teacher(teacher_id):
+    return User.objects.get(id=teacher_id, role='teacher')
+
 
 def authenticate_user(username, password):
     user = authenticate(username=username, password=password)
