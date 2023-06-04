@@ -7,7 +7,6 @@ from rest_framework import status
 from StudentManagementAPI.permissions import IsHead, IsTeacher
 from .services import get_teacher_courses, create_course, assign_class_to_course, get_course
 from .models import Course
-from .serializers import CourseSerializer
 
 
 class TeacherCoursesList(APIView):
@@ -15,7 +14,7 @@ class TeacherCoursesList(APIView):
 
     def get(self, request, teacher_id, format=None):
         courses = get_teacher_courses(teacher_id)
-        return Response(CourseSerializer(courses, many=True).data, status=status.HTTP_200_OK)
+        return Response(json.dumps(courses), status=status.HTTP_200_OK)
 
 
 class CourseCreate(APIView):
